@@ -1,8 +1,8 @@
 -- Точка == точка доступа == роутер == маршрутизатор == модем ну вы поняли :)
 -- Станция === esp-ха являеться точкой доступа
 
-_G = nil -- чистим всё перед запуском
-collectgarbage() -- чистим всё перед запуском
+G = nil; collectgarbage() -- чистим всё перед запуском
+
 _G = {
     conf = {
         reputedPoints = {-- доверенные (ожидаемые) точки
@@ -18,9 +18,9 @@ _G = {
             "asus_points",
         },
         wifistaconfig = {-- настройки подключения к точке доступа
-            ip = "192.168.0.111", -- желаемый IP esp-хи как клиента точки [если точка доступа даст DHCP добро] :)
+            ip = "192.168.0.5", -- желаемый IP esp-хи как клиента точки [если точка доступа даст DHCP добро] :)
             netmask = "255.255.255.0",
-            gateway = "192.168.0.1"
+            gateway = "192.168.0.1" -- 192.168.X._   X должен отличаться от wifiapconfig.gateway 192.168.X._ при wifi.STATIONAP
         },
         wifiapconfig = { -- настройки esp-хи в режиме станции
             ssid = "ESP-"..node.chipid(), -- имя esp-хи как станции
@@ -28,10 +28,10 @@ _G = {
             auth = wifi.OPEN, -- режим авторизации wifi.OPEN wifi.WPA_PSK, wifi.WPA2_PSK, wifi.WPA_WPA2_PSK
             hidden = 0, -- скрытый режим 1(включён) или 0
             max = 4, -- количество одновременных клиентов (соединений)
-            ip = "192.168.0.100", -- IP esp-хи как станции
+            ip = "192.168.5.5", -- IP esp-хи как станции
             netmask = "255.255.255.0", -- полезного применения не нашол (просто стандарт)
-            gateway = "192.168.0.1",-- полезного применения не нашол (просто стандарт)
-            start = "192.168.0.111" -- DHCP старт выдачи IP клиентам
+            gateway = "192.168.5.1",-- 192.168.X._   X должен отличаться от wifistaconfig.gateway 192.168.X._ при wifi.STATIONAP
+            start = "192.168.5.6" -- DHCP старт выдачи IP клиентам
         }
     },
     sta = {
@@ -69,12 +69,12 @@ _G = {
                 if #_G.sta.reputedPoints then -- есть известные точки
                     wifi.sta.config(
                         _G.sta.reputedPoints[1].ssid,
-                        _G.sta.reputedPoints[1].pwd
+                        _G.sta.reputedPoints[1].pwd,1
                     )
                 elseif #_G.sta.openPoints then -- есть открытые точки
                     wifi.sta.config(
                         _G.sta.openPoints[1].ssid,
-                        _G.sta.openPoints[1].pwd
+                        _G.sta.openPoints[1].pwd,1
                     )
                 else -- нет доступных точек
                     print("STA Так как доступных точек нет, следующее сканирование\n\tсетей будет проведено через 5 минут.")
@@ -88,12 +88,13 @@ _G = {
 wifi.setmode(wifi.STATIONAP) -- esp-ха будет работать в двух режимах одновременно
 -- как клиент и как точка доступа, wifi.NULLMODE = режим сна
 wifi.setphymode(wifi.PHYMODE_G)   -- https://nodemcu.readthedocs.io/en/master/en/modules/wifi/#wifisetphymode
-wifi.sta.config("________","________") -- сброс конфига (затирание) 
+wifi.sta.config("________","________") -- сброс конфига (затирание)
 wifi.sta.autoconnect(1) -- включаем автоподключение к точке доступа (явно)
 wifi.sta.setip(_G.conf.wifistaconfig)
 
-wifi.ap.setip(_G.conf.wifiapconfig)
+
 wifi.ap.config(_G.conf.wifiapconfig)
+wifi.ap.setip(_G.conf.wifiapconfig)
 wifi.ap.dhcp.config(_G.conf.wifiapconfig)
 
 
@@ -111,30 +112,29 @@ wifi.eventmon.register(wifi.eventmon.STA_CONNECTED, function(T)
 end)
 wifi.eventmon.register(wifi.eventmon.STA_GOT_IP, function(T)
     print("Получен IP: " .. T.IP)-- T.netmask -- T.gateway
+    print("Получен AP IP: " .. wifi.ap.getip())-- T.netmask -- T.gateway
     tmr.stop(0)
-        
-        
+
     local httpServer = net.createServer(net.TCP, 10) -- 10 seconds client timeout
     httpServer:listen(80, function (connection)
-            local function onReceive(connection, payload)
-                print("Receive Receive Receive Receive")
-                connection:send("Receive Receive Receive Receive АБВабв")
-                connection:close()
-            end
-            local function onSent(connection, payload)
-                print("Sent Sent Sent Sent")
-                connection:close()
-            end
-            local function onDisconnect(connection, payload)
-                print("Disconnect")
-                collectgarbage()
-            end
-            connection:on("receive", onReceive)
-            connection:on("sent", onSent)
-            connection:on("disconnection", onDisconnect)
+        local function onReceive(connection, payload)
+            print("Receive Receive Receive Receive")
+            connection:send("Receive Receive Receive Receive АБВабв")
+            connection:close()
         end
-    )
-    
+        local function onSent(connection, payload)
+            print("Sent Sent Sent Sent")
+            connection:close()
+        end
+        local function onDisconnect(connection, payload)
+            print("Disconnect")
+            collectgarbage()
+        end
+        connection:on("receive", onReceive)
+        connection:on("sent", onSent)
+        connection:on("disconnection", onDisconnect)
+    end)
+
 end)
 
 _G.sta.scan()
