@@ -112,6 +112,28 @@ end)
 wifi.eventmon.register(wifi.eventmon.STA_GOT_IP, function(T)
     print("Получен IP: " .. T.IP)-- T.netmask -- T.gateway
     tmr.stop(0)
+        
+        
+    local httpServer = net.createServer(net.TCP, 10) -- 10 seconds client timeout
+    httpServer:listen(80, function (connection)
+            local function onReceive(connection, payload)
+                print("Receive Receive Receive Receive")
+                connection:send("Receive Receive Receive Receive АБВабв")
+                connection:close()
+            end
+            local function onSent(connection, payload)
+                print("Sent Sent Sent Sent")
+                connection:close()
+            end
+            local function onDisconnect(connection, payload)
+                print("Disconnect")
+                collectgarbage()
+            end
+            connection:on("receive", onReceive)
+            connection:on("sent", onSent)
+            connection:on("disconnection", onDisconnect)
+        end
+    )
     
 end)
 
