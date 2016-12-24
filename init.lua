@@ -5,8 +5,11 @@ G = nil; collectgarbage() -- чистим всё перед запуском
 
 _G = {
     sta = {
+        http = {
+            port = 80 -- HTTP сервер будет слушать этот порт
+        },
         conf = {
-            reputedWIFI = {-- доверенные (ожидаемые) точки
+            reputedWIFI = {-- доверенные (ожидаемые) точки (не пустой пароль обязательно)
                 ["asd"] = "11111111",
                 ["dsa"] = "11111111",
                 ["qwert"] = "11111111",
@@ -19,6 +22,7 @@ _G = {
                 -- У illWIFI более высокий приоритет, если точка есть в reputedWIFI
                 -- она всё равно будет исключена из возможных к подключению.
                 ["dt33"] = true, -- участвует в чёрном списке
+                ["infotradeinfo"] = true,-- участвует в чёрном списке
                 ["illwifi"] = true,-- участвует в чёрном списке
                 ["illwifi2"] = false,-- НЕ участвует в чёрном списке
                 --["illwifi3"] = false,-- НЕ участвует в чёрном списке :)
@@ -56,8 +60,8 @@ _G = {
                         channel = c,
                         bssid = b
                     })
-                    if _G.sta.conf.illWIFI[s] then -- известная точка
-                        print(s.. " внесена в чёрный список.")
+                    if _G.sta.conf.illWIFI[s] then -- если точка есть в чёрном списке
+                        print(s .. " внесена в чёрный список.")
                         table.insert(_G.sta.illWIFI, s)
                     else
                         if _G.sta.conf.reputedWIFI[s] then -- известная точка
@@ -77,7 +81,6 @@ _G = {
                         ",\nиз них открытых: " .. #_G.sta.openWIFI ..
                         ",\nиз них запрещенных: " .. #_G.sta.illWIFI
                 )
-
                 if #_G.sta.reputedWIFI > 0 then -- есть известные точки
                 print("STA Попытка подключения к известной точке " .. _G.sta.reputedWIFI[1].ssid)
                     wifi.sta.config(
@@ -90,10 +93,9 @@ _G = {
                         _G.sta.openWIFI[1].ssid,
                         _G.sta.openWIFI[1].pwd,1
                     )
-                    wifi.sta.connect()
-                else -- нет доступных точек
-                    print("STA Так как доступных точек нет, следующее сканирование\nсетей будет проведено через 5 минут.")
-                    tmr.alarm(0, 1000 * 60 * 5 --[[ 5 минут ]], 1, _G.sta.start)-- запускаем сканирование снова через в n-ное время
+                --else -- нет доступных точек
+                --    print("STA Так как доступных точек нет, следующее сканирование\nсетей будет проведено через 5 минут.")
+                --    tmr.alarm(0, 1000 * 60 * 5 --[[ 5 минут ]], 1, _G.sta.start)-- запускаем сканирование снова через в n-ное время
                 end
             end)
         end
@@ -103,7 +105,7 @@ _G = {
             wifiapconfig = { -- настройки esp-хи в режиме станции
                 ssid = "ESP-"..node.chipid(), -- имя esp-хи как станции
                 pwd = "88888888", -- пароль авторизации
-                auth = wifi.OPEN, -- режим авторизации wifi.OPEN wifi.WPA_PSK, wifi.WPA2_PSK, wifi.WPA_WPA2_PSK
+                auth = wifi.WPA_WPA2_PSK, -- режим авторизации wifi.OPEN, wifi.WPA_PSK, wifi.WPA2_PSK, wifi.WPA_WPA2_PSK
                 hidden = 0, -- скрытый режим 1(включён) или 0
                 max = 4, -- количество одновременных клиентов (соединений)
                 ip = "192.168.5.5", -- IP esp-хи как станции
@@ -116,15 +118,10 @@ _G = {
             wifi.ap.config(_G.ap.conf.wifiapconfig)
             wifi.ap.setip(_G.ap.conf.wifiapconfig)
             wifi.ap.dhcp.config(_G.ap.conf.wifiapconfig)
+            print("\n\n\nAP Установлен IP: " .. wifi.ap.getip())-- T.netmask -- T.gateway
         end
     }
 }
-
-
-
-
-
-
 
 wifi.eventmon.register(wifi.eventmon.STA_CONNECTED, function(T)
     print("STA Соединение с " .. T.SSID .. ", установленно на канале "..T.channel .. " mac: "..T.BSSID)
@@ -135,7 +132,10 @@ wifi.eventmon.register(wifi.eventmon.STA_DISCONNECTED, function(T)
     if T.reason == 202 then
         table.insert(_G.sta.conf.illWIFI, T.SSID)
         print(T.SSID.. " добавлена в чёрный список (не удалось авторизоватся.)")
+    --elseif T.reason == 200 or T.reason == 201 then
+
     end
+    _G.sta.start()
     --wifi.eventmon.unregister(wifi.eventmon.STA_DISCONNECTED)
     --_G.sta.scan()
 end)
@@ -147,36 +147,23 @@ wifi.eventmon.register(wifi.eventmon.STA_DHCP_TIMEOUT, function()
 print("\n\tSTA - DHCP TIMEOUT")
 end)
 
+wifi.eventmon.register(wifi.eventmon.AP_STACONNECTED, function(T)
+    print("AP Подключился: " .. T.MAC .. " идинтификатор: " .. T.AID)
+end)
+
+wifi.eventmon.register(wifi.eventmon.AP_STADISCONNECTED, function(T)
+    print("AP Потеряно соединение с : " .. T.MAC .. " идинтификатор: " .. T.AID)
+end)
 
 wifi.eventmon.register(wifi.eventmon.STA_GOT_IP, function(T)
     print("STA Получен IP: " .. T.IP)-- T.netmask -- T.gateway
-    print("Получен AP IP: " .. wifi.ap.getip())-- T.netmask -- T.gateway
     tmr.stop(0)
 
-        print("httpServer")
-        local httpServer = net.createServer(net.TCP, 10) -- 10 seconds client timeout
-        httpServer:listen(80, function (connection)
-            local function onReceive(connection, payload)
-                print("Receive Receive Receive Receive")
-                connection:send("Receive Receive Receive Receive АБВабв")
-                connection:close()
-            end
-            local function onSent(connection, payload)
-                print("Sent Sent Sent Sent")
-                connection:close()
-            end
-            local function onDisconnect(connection, payload)
-                print("Disconnect")
-                collectgarbage()
-            end
-            connection:on("receive", onReceive)
-            connection:on("sent", onSent)
-            connection:on("disconnection", onDisconnect)
-        end)
+        dofile("myhttpserver.lua")
 
 end)
 
-_G.ap.start() -- restart собственно запуск
+_G.ap.start() -- перезапускаем станцию с нашими настройками
 _G.sta.start() -- restart собственно запуск
 
 
