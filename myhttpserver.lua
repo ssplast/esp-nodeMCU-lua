@@ -1,10 +1,10 @@
-if not _G.sta.http.server then
-    _G.sta.http.server = net.createServer(net.TCP, 10)
-    _G.sta.http.server:listen(_G.sta.http.port, function (connection)
+if not _G.http.server then
+    _G.http.server = net.createServer(net.TCP, 10)
+    _G.http.server:listen(_G.http.port, function (connection)
 
 
         local function onReceive(connection, req)
-            print("Запрос")
+            print("Р—Р°РїСЂРѕСЃ")
             local e = req:find("\r\n", 1, true)
             local line = req:sub(1, e - 1)
             local r = {}
@@ -15,22 +15,22 @@ if not _G.sta.http.server then
             print("r.request = " .. r.request)
             print(line)
             print("\n\n\n"..req)
-            connection:send("Добро пожалровать.")
+            connection:send("Р”РѕР±СЂРѕ РїРѕР¶Р°Р»СЂРѕРІР°С‚СЊ.")
             --connection:close()
         end
         local function onSent(connection, payload)
-            print("Отправка данных окончена.")
+            print("РћС‚РїСЂР°РІРєР° РґР°РЅРЅС‹С… РѕРєРѕРЅС‡РµРЅР°.")
             connection:close()
         end
         local function onDisconnect(connection, payload)
-            print("Запрос окончен.")
+            print("Р—Р°РїСЂРѕСЃ РѕРєРѕРЅС‡РµРЅ.")
             collectgarbage()
         end
         connection:on("receive", onReceive)
         connection:on("sent", onSent)
         connection:on("disconnection", onDisconnect)
     end)
-    print("Начал работу HTTP сервер на " .. _G.sta.http.port .. " порту.")
+    print("РќР°С‡Р°Р» СЂР°Р±РѕС‚Сѓ HTTP СЃРµСЂРІРµСЂ РЅР° " .. _G.http.port .. " РїРѕСЂС‚Сѓ.")
 else
-    print("HTTP сервер уже запущен.")
+    print("HTTP СЃРµСЂРІРµСЂ РїСЂРѕРґР°Р»Р¶Р°РµС‚ СЃРІРѕСЋ СЂР°Р±РѕС‚Сѓ РЅР° РїРѕСЂС‚Сѓ: ".._G.http.port)
 end
