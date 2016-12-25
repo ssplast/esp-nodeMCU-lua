@@ -133,27 +133,20 @@ wifi.eventmon.register(wifi.eventmon.STA_DISCONNECTED, function(T)
             T.BSSID)
     if T.reason == 202 and not _G.sta.conf.illWIFI[T.SSID] then
         _G.sta.conf.illWIFI[T.SSID] = true
-        --table.insert(_G.sta.conf.illWIFI, T.SSID)
         print(T.SSID.. " добавлена в чёрный список (не удалось авторизоватся.)")
     end
     _G.sta.start()
 end)
 wifi.eventmon.register(wifi.eventmon.STA_AUTHMODE_CHANGE, function(T)
     print("wifi.eventmon.register(wifi.eventmon.STA_AUTHMODE_CHANGE, function(T)")
-    _G.sta.start()
-end)
+    _G.sta.start() end)
 wifi.eventmon.register(wifi.eventmon.STA_DHCP_TIMEOUT, function()
     print("wifi.eventmon.register(wifi.eventmon.STA_DHCP_TIMEOUT, function()")
-    _G.sta.start()
-end)
-
+    _G.sta.start() end)
 wifi.eventmon.register(wifi.eventmon.AP_STACONNECTED, function(T)
-    print("AP Подключился клиент MAC: " .. T.MAC .. " ID: " .. T.AID)
-end)
-
+    print("AP Подключился клиент MAC: " .. T.MAC .. " ID: " .. T.AID) end)
 wifi.eventmon.register(wifi.eventmon.AP_STADISCONNECTED, function(T)
-    print("AP Потеряно соединение с клиентом MAC: " .. T.MAC .. " ID: " .. T.AID)
-end)
+    print("AP Потеряно соединение с клиентом MAC: " .. T.MAC .. " ID: " .. T.AID) end)
 
 
 _G.ap.start() -- перезапускаем станцию с нашими настройками, ESP-ха как точка доступа
