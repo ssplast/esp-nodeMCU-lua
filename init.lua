@@ -4,10 +4,11 @@
 G = nil; collectgarbage() -- чистим всё перед запуском
 
 _G = {
+    http = {
+        port = 80, -- HTTP сервер будет слушать этот порт
+        server = false
+    },
     sta = {
-        http = {
-            port = 80 -- HTTP сервер будет слушать этот порт
-        },
         conf = {
             reputedWIFI = {-- доверенные (ожидаемые) точки (не пустой пароль обязательно)
                 ["asd"] = "11111111",
@@ -61,7 +62,7 @@ _G = {
                         bssid = b
                     })
                     if _G.sta.conf.illWIFI[s] then -- если точка есть в чёрном списке
-                        print(s .. " внесена в чёрный список.")
+                        --print("STA Точка " .. s .. " внесена в чёрный список.")
                         table.insert(_G.sta.illWIFI, s)
                     else
                         if _G.sta.conf.reputedWIFI[s] then -- известная точка
@@ -93,9 +94,6 @@ _G = {
                         _G.sta.openWIFI[1].ssid,
                         _G.sta.openWIFI[1].pwd,1
                     )
-                --else -- нет доступных точек
-                --    print("STA Так как доступных точек нет, следующее сканирование\nсетей будет проведено через 5 минут.")
-                --    tmr.alarm(0, 1000 * 60 * 5 --[[ 5 минут ]], 1, _G.sta.start)-- запускаем сканирование снова через в n-ное время
                 end
             end)
         end
@@ -126,44 +124,40 @@ _G = {
 wifi.eventmon.register(wifi.eventmon.STA_CONNECTED, function(T)
     print("STA Соединение с " .. T.SSID .. ", установленно на канале "..T.channel .. " mac: "..T.BSSID)
 end)
+wifi.eventmon.register(wifi.eventmon.STA_GOT_IP, function(T)
+    print("STA Получен IP: " .. T.IP)-- T.netmask -- T.gateway
+    dofile("myhttpserver.lua")-- можно запустить и в другом месте,
+    -- тут HTTP сервер запускается после удачного подключения к роутеру
+end)
 wifi.eventmon.register(wifi.eventmon.STA_DISCONNECTED, function(T)
     print("STA Потеряно соединение с: "..T.SSID.." reason: " ..T.reason .. " BSSID: "..
             T.BSSID)
-    if T.reason == 202 then
-        table.insert(_G.sta.conf.illWIFI, T.SSID)
+    if T.reason == 202 and not _G.sta.conf.illWIFI[T.SSID] then
+        _G.sta.conf.illWIFI[T.SSID] = true
+        --table.insert(_G.sta.conf.illWIFI, T.SSID)
         print(T.SSID.. " добавлена в чёрный список (не удалось авторизоватся.)")
-    --elseif T.reason == 200 or T.reason == 201 then
-
     end
     _G.sta.start()
-    --wifi.eventmon.unregister(wifi.eventmon.STA_DISCONNECTED)
-    --_G.sta.scan()
 end)
 wifi.eventmon.register(wifi.eventmon.STA_AUTHMODE_CHANGE, function(T)
-print("\n\tSTA - AUTHMODE CHANGE".."\n\told_auth_mode: "..
-        T.old_auth_mode.."\n\tnew_auth_mode: "..T.new_auth_mode)
+    print("wifi.eventmon.register(wifi.eventmon.STA_AUTHMODE_CHANGE, function(T)")
+    _G.sta.start()
 end)
 wifi.eventmon.register(wifi.eventmon.STA_DHCP_TIMEOUT, function()
-print("\n\tSTA - DHCP TIMEOUT")
+    print("wifi.eventmon.register(wifi.eventmon.STA_DHCP_TIMEOUT, function()")
+    _G.sta.start()
 end)
 
 wifi.eventmon.register(wifi.eventmon.AP_STACONNECTED, function(T)
-    print("AP Подключился: " .. T.MAC .. " идинтификатор: " .. T.AID)
+    print("AP Подключился клиент MAC: " .. T.MAC .. " ID: " .. T.AID)
 end)
 
 wifi.eventmon.register(wifi.eventmon.AP_STADISCONNECTED, function(T)
-    print("AP Потеряно соединение с : " .. T.MAC .. " идинтификатор: " .. T.AID)
+    print("AP Потеряно соединение с клиентом MAC: " .. T.MAC .. " ID: " .. T.AID)
 end)
 
-wifi.eventmon.register(wifi.eventmon.STA_GOT_IP, function(T)
-    print("STA Получен IP: " .. T.IP)-- T.netmask -- T.gateway
-    tmr.stop(0)
 
-        dofile("myhttpserver.lua")
-
-end)
-
-_G.ap.start() -- перезапускаем станцию с нашими настройками
-_G.sta.start() -- restart собственно запуск
+_G.ap.start() -- перезапускаем станцию с нашими настройками, ESP-ха как точка доступа
+_G.sta.start() -- start собственно запуск STA, ESP-ха как клиент роутера
 
 
