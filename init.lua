@@ -5,8 +5,7 @@ G = nil; collectgarbage() -- чистим всё перед запуском
 
 _G = {
     http = {
-        port = 80, -- HTTP сервер будет слушать этот порт
-        server = false
+        port = 80 -- HTTP сервер будет слушать этот порт
     },
     sta = {
         conf = {
