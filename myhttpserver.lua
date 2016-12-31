@@ -1,36 +1,26 @@
 if not _G.http.server then
     _G.http.server = net.createServer(net.TCP, 10)
-    _G.http.server:listen(_G.http.port, function (connection)
-
-
-        local function onReceive(connection, req)
-            print("Р—Р°РїСЂРѕСЃ")
-            local e = req:find("\r\n", 1, true)
-            local line = req:sub(1, e - 1)
-            local r = {}
-            _, i, r.method, r.request = line:find("^([A-Z]+) (.-) HTTP/[1-9]+.[0-9]+$")
-            print("_ = " .. _)
-            print("i = " .. i)
-            print("r.method = " .. r.method)
-            print("r.request = " .. r.request)
-            print(line)
-            print("\n\n\n"..req)
-            connection:send("Р”РѕР±СЂРѕ РїРѕР¶Р°Р»СЂРѕРІР°С‚СЊ.")
-            --connection:close()
-        end
-        local function onSent(connection, payload)
-            print("РћС‚РїСЂР°РІРєР° РґР°РЅРЅС‹С… РѕРєРѕРЅС‡РµРЅР°.")
-            connection:close()
-        end
-        local function onDisconnect(connection, payload)
-            print("Р—Р°РїСЂРѕСЃ РѕРєРѕРЅС‡РµРЅ.")
+    _G.http.server:listen(_G.http.port, function (conn)
+        conn:on("receive", function(conn, req)
+            local parsereq = req
+            print("Запрос")
+            local url = string.match(req, "[%u]+ (/[%d%a]*%.?[%d%a]*)")
+            local val = string.match(req, "%?([%a%d%p]+)" )
+            local method = string.match(req, "([%u]+) /")
+            conn:send("<div>Добро пожалровать.</div><div>".. method .."</div><div>".. url .."</div><div>".. val .."</div>")
+        end)
+        conn:on("sent", function(conn, payload)
+            print("Отправка данных окончена.")
+            conn:close()
+        end)
+        conn:on("disconnection", function(conn, payload)
+            print("Запрос окончен.")
+            conn = nil
+            payload = nil
             collectgarbage()
-        end
-        connection:on("receive", onReceive)
-        connection:on("sent", onSent)
-        connection:on("disconnection", onDisconnect)
+        end)
     end)
-    print("РќР°С‡Р°Р» СЂР°Р±РѕС‚Сѓ HTTP СЃРµСЂРІРµСЂ РЅР° " .. _G.http.port .. " РїРѕСЂС‚Сѓ.")
+    print("Начал работу HTTP сервер на " .. _G.http.port .. " порту.")
 else
-    print("HTTP СЃРµСЂРІРµСЂ РїСЂРѕРґР°Р»Р¶Р°РµС‚ СЃРІРѕСЋ СЂР°Р±РѕС‚Сѓ РЅР° РїРѕСЂС‚Сѓ: ".._G.http.port)
+    print("HTTP сервер продалжает свою работу на порту: ".._G.http.port)
 end
